@@ -1,0 +1,7 @@
+C:\Users\david nicoll\Documents\Visual Studio 2010\Projects\DoubleD\DoubleD\DepDot\bin\Release\DepDot.dll
+C:\Users\david nicoll\Documents\Visual Studio 2010\Projects\DoubleD\DoubleD\DepDot\bin\Release\DepDot.pdb
+C:\Users\david nicoll\Documents\Visual Studio 2010\Projects\DoubleD\DoubleD\DepDot\bin\Release\Excel.dll
+C:\Users\david nicoll\Documents\Visual Studio 2010\Projects\DoubleD\DoubleD\DepDot\bin\Release\ICSharpCode.SharpZipLib.dll
+C:\Users\david nicoll\Documents\Visual Studio 2010\Projects\DoubleD\DoubleD\DepDot\obj\Release\ResolveAssemblyReference.cache
+C:\Users\david nicoll\Documents\Visual Studio 2010\Projects\DoubleD\DoubleD\DepDot\obj\Release\DepDot.dll
+C:\Users\david nicoll\Documents\Visual Studio 2010\Projects\DoubleD\DoubleD\DepDot\obj\Release\DepDot.pdb

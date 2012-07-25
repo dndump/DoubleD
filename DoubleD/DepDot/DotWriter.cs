@@ -1,83 +1,87 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace DepDot
 {
     public class DotWriter
     {
-        private List<LineItem> _lines;
+        public List<LineItem> LineItems;
+        public StringBuilder DotOutput;
+        public bool NoFrom { get; set; }
+        public bool RankFix { get; set; }
+        public bool IncludePast { get; set; }
+        public string FilterStrategic { get; set; }
+        public string FilterSchedule { get; set; }
+        public string FilterOwner { get; set; }
+        public int FilterControl { get; set; }
+        public bool FilterDate { get; set; }
+        public DateTime FilterDateFrom { get; set; }
+        public DateTime FilterDateTo { get; set; }
 
-        private int _FilterControl;
-        public int FilterControl
+        public DotWriter()
         {
-            get
-            {
-                return _FilterControl;
-            }
-            set
-            {
-                _FilterControl = value;
-            }
         }
-
-        public bool NoFrom;
-        private bool _NoFrom { get }
 
         public DotWriter(List<LineItem> lines)
         {
-            _lines = lines;
+            LineItems = lines;
         }
 
-        public static StringBuilder GenerateDot(List<LineItem> lines, bool noFrom, bool rankFix, bool includePast, string filterStrategic, string filterSchedule, int filterControl, string filterOwner, bool filterDate, DateTime filterDateFrom, DateTime filterDateTo)
+        public StringBuilder GenerateDot()
         {
-            StringBuilder sb = new StringBuilder();
+            DotOutput = new StringBuilder();
 
-            sb.AppendLine("digraph testdiagram {");
+            DotOutput.AppendLine("digraph testdiagram {");
 
             //write schedules and versions
-            List<string> schedules = new List<string>();
-            foreach (LineItem line in lines)
+            var schedules = new List<string>();
+            foreach (LineItem line in LineItems.Where(line => !schedules.Contains(line.Schedule + " " + line.Version)))
             {
-                if (!schedules.Contains(line.Schedule + " " + line.Version))
-                {
-                    schedules.Add(line.Schedule + " " + line.Version);
-                }
+                schedules.Add(line.Schedule + " " + line.Version);
             }
 
-            string weight, control = "", scheduleColor = "", style = "";
+            string control = "";
+            const string scheduleColor = "";
+            var style = "";
 
-            sb.AppendLine("node[shape = diamond];");
-            sb.Append("{ rank = same; ");
-            if (rankFix) sb.Append("ranks ");
+            DotOutput.AppendLine("node[shape = diamond];");
+            DotOutput.Append("{ rank = same; ");
+            if (RankFix) DotOutput.Append("ranks ");
             foreach (string schedule in schedules)
             {
-                sb.Append("s" + schedules.IndexOf(schedule).ToString() + " [label=\"" + schedule + "\"] ");
+                DotOutput.Append("s" + schedules.IndexOf(schedule).ToString() + " [label=\"" + schedule + "\"] ");
             }
-            sb.AppendLine("}");
+            DotOutput.AppendLine("}");
 
-            sb.AppendLine("node[shape = box];");
+            DotOutput.AppendLine("node[shape = box];");
 
-            UpdateProjectIds(lines);
+            UpdateProjectIds();
 
             //Projects (nodes)
-            foreach (LineItem line in lines)
+            foreach (LineItem line in LineItems)
             {
-                if (!IsFiltered(line, includePast, filterStrategic, filterSchedule, filterControl, filterOwner, filterDate, filterDateFrom, filterDateTo))
+                if (!IsFiltered(line))
                 {
-                    sb.AppendLine("p" + line.UniqueProjectId + " [label=\"" + line.ProjectName + "\"" + scheduleColor + "]; ");
+                    DotOutput.AppendLine("p" + line.UniqueProjectId + " [label=\"" + line.ProjectName + "\"" +
+                                         scheduleColor + "]; ");
                     line.Rendered = true;
                 }
             }
 
             //Schedule - Project (edge)
-            foreach (LineItem line in lines)
+            foreach (LineItem line in LineItems)
             {
-                if (!IsFiltered(line, includePast, filterStrategic, filterSchedule, filterControl, filterOwner, filterDate, filterDateFrom, filterDateTo))
+                if (!IsFiltered(line))
                 {
-                    if (!OutputContains("s" + schedules.IndexOf(line.Schedule + " " + line.Version).ToString() + " -> p" + line.UniqueProjectId, sb))
+                    if (
+                        !OutputContains(
+                            "s" + schedules.IndexOf(line.Schedule + " " + line.Version).ToString() + " -> p" +
+                            line.UniqueProjectId, DotOutput))
                     {
-                        sb.AppendLine("s" + schedules.IndexOf(line.Schedule + " " + line.Version).ToString() + " -> p" + line.UniqueProjectId + " [arrowhead=none color=gray88];");
+                        DotOutput.AppendLine("s" + schedules.IndexOf(line.Schedule + " " + line.Version).ToString() +
+                                             " -> p" + line.UniqueProjectId + " [arrowhead=none color=gray88];");
                     }
                 }
             }
@@ -85,9 +89,9 @@ namespace DepDot
             //UpdateSchedules(lines);
 
             //Project - Project (edge)
-            foreach (LineItem line in lines)
+            foreach (LineItem line in LineItems)
             {
-                weight = " weight=" + Convert.ToString((int)line.Impact) + " ";
+                string weight = " weight=" + Convert.ToString((int) line.Impact) + " ";
                 switch (line.Control)
                 {
                     case Control.RED:
@@ -112,23 +116,31 @@ namespace DepDot
                     case "TO":
                         if (line.TargetLine != null)
                         {
-                            sb.AppendLine("p" + line.UniqueProjectId + " -> " + "p" + line.TargetLine.Id + " [" + control + weight + style + " label=" + line.Id.ToString() + "];");
+                            DotOutput.AppendLine("p" + line.UniqueProjectId + " -> " + "p" + line.TargetLine.Id + " [" +
+                                                 control + weight + style + " label=" + line.Id.ToString() + "];");
                         }
                         else
                         {
-                            sb.AppendLine("u" + Sanitise(line.Dependency) + " [label=\"" + line.Dependency + "?\"]; ");
-                            sb.AppendLine("p" + line.UniqueProjectId + " -> " + "u" + Sanitise(line.Dependency) + " [" + control + weight + style + " label=" + line.Id.ToString() + "];");
+                            DotOutput.AppendLine("u" + Sanitise(line.Dependency) + " [label=\"" + line.Dependency +
+                                                 "?\"]; ");
+                            DotOutput.AppendLine("p" + line.UniqueProjectId + " -> " + "u" + Sanitise(line.Dependency) +
+                                                 " [" + control + weight + style + " label=" + line.Id.ToString() + "];");
                         }
                         break;
                     case "FROM":
                         if (line.TargetLine != null)
                         {
-                            sb.AppendLine("p" + line.UniqueProjectId + " -> p" + line.TargetLine.Id + " [" + control + weight + style + " dir=back label=" + line.Id.ToString() + "];");
+                            DotOutput.AppendLine("p" + line.UniqueProjectId + " -> p" + line.TargetLine.Id + " [" +
+                                                 control + weight + style + " dir=back label=" + line.Id.ToString() +
+                                                 "];");
                         }
                         else
                         {
-                            sb.AppendLine("u" + Sanitise(line.Dependency) + " [label=\"" + line.Dependency + "?\"]; ");
-                            sb.AppendLine("p" + line.UniqueProjectId + " -> " + "u" + Sanitise(line.Dependency) + " [" + control + weight + style + " dir=back label=" + line.Id.ToString() + "];");
+                            DotOutput.AppendLine("u" + Sanitise(line.Dependency) + " [label=\"" + line.Dependency +
+                                                 "?\"]; ");
+                            DotOutput.AppendLine("p" + line.UniqueProjectId + " -> " + "u" + Sanitise(line.Dependency) +
+                                                 " [" + control + weight + style + " dir=back label=" +
+                                                 line.Id.ToString() + "];");
                         }
                         break;
                     case "INTER":
@@ -138,17 +150,17 @@ namespace DepDot
                 }
             }
 
-            sb.AppendLine("}");
-            return (sb);
+            DotOutput.AppendLine("}");
+            return (DotOutput);
         }
 
-        private static List<LineItem> UpdateProjectIds(List<LineItem> lines)
+        private void UpdateProjectIds()
         {
-            foreach (LineItem line in lines)
+            foreach (LineItem line in LineItems)
             {
                 //Get unique project Id for this line
                 int uniqueId = -1;
-                uniqueId = GetUniqueProjectId(line.Schedule, line.Version, line.ProjectName, lines);
+                uniqueId = GetUniqueProjectId(line.Schedule, line.Version, line.ProjectName);
 
                 if (uniqueId > -1 && uniqueId != line.Id)
                 {
@@ -159,7 +171,7 @@ namespace DepDot
                     line.UniqueProjectId = line.Id;
                 }
 
-                LineItem targetLine = GetLine(line.Reference, lines);
+                LineItem targetLine = GetLine(line.Reference);
 
                 //Get unique project Id for target line
                 uniqueId = -1;
@@ -167,20 +179,19 @@ namespace DepDot
                 {
                     line.TargetLine = targetLine;
 
-                    uniqueId = GetUniqueProjectId(targetLine.Schedule, targetLine.ProjectName, lines);
+                    uniqueId = GetUniqueProjectId(targetLine.Schedule, targetLine.ProjectName);
 
                     if (uniqueId > -1 && uniqueId != targetLine.Id)
                     {
-                        line.TargetLine = GetLine(uniqueId, lines);
+                        line.TargetLine = GetLine(uniqueId);
                     }
                 }
             }
-            return lines;
         }
 
-        private static List<LineItem> UpdateSchedules(List<LineItem> lines)
+        private void UpdateSchedules()
         {
-            foreach (LineItem line in lines)
+            foreach (LineItem line in LineItems)
             {
                 switch (line.Schedule.ToLower())
                 {
@@ -248,60 +259,60 @@ namespace DepDot
                         break;
                 }
             }
-            return lines;
         }
 
-        private static bool IsFiltered(LineItem li, bool includePast, string filterStrategic, string filterSchedule, int filterControl, string filterOwner, bool filterDate, DateTime filterDateFrom, DateTime filterDateTo)
+        private bool IsFiltered(LineItem line)
+            //, bool includePast, string filterStrategic, string filterSchedule, int filterControl, string filterOwner, bool filterDate, DateTime filterDateFrom, DateTime filterDateTo)
         {
             //ignore items that don't match the control filter
-            if (filterControl>=0)
+            if (FilterControl >= 0)
             {
-                if ((int)li.Control != filterControl)
+                if ((int) line.Control != FilterControl)
                 {
                     return true;
                 }
             }
-            
+
             //ignore past dependencies
-            if (!includePast)
+            if (!IncludePast)
             {
-                if (DateTime.Now.AddMonths(-1) >= li.ToProduction)
+                if (DateTime.Now.AddMonths(-1) >= line.ToProduction)
                 {
                     return true;
                 }
             }
 
             //ignore items that don't match the strategy filter
-            if (!string.IsNullOrEmpty(filterStrategic))
+            if (!string.IsNullOrEmpty(FilterStrategic))
             {
-                if (li.Strategic != filterStrategic)
+                if (line.Strategic != FilterStrategic)
                 {
                     return true;
                 }
             }
 
             //ignore items that don't match the schedule filter
-            if (!string.IsNullOrEmpty(filterSchedule))
+            if (!string.IsNullOrEmpty(FilterSchedule))
             {
-                if (li.Schedule != filterSchedule)
+                if (line.Schedule != FilterSchedule)
                 {
                     return true;
                 }
             }
 
             //ignore items that don't match the owner filter
-            if (!string.IsNullOrEmpty(filterOwner))
+            if (!string.IsNullOrEmpty(FilterOwner))
             {
-                if (li.Owner != filterOwner)
+                if (line.Owner != FilterOwner)
                 {
                     return true;
                 }
             }
 
             //ignore dates outside of the date range
-            if (filterDate)
+            if (FilterDate)
             {
-                if (li.ToProduction <= filterDateFrom || li.ToProduction >= filterDateTo)
+                if (line.ToProduction <= FilterDateFrom || line.ToProduction >= FilterDateTo)
                 {
                     return true;
                 }
@@ -310,9 +321,9 @@ namespace DepDot
             return false;
         }
 
-        public static int GetUniqueProjectId(string projectName, List<LineItem> lines)
+        public int GetUniqueProjectId(string projectName)
         {
-            foreach (LineItem line in lines)
+            foreach (LineItem line in LineItems)
             {
                 if (line.ProjectName.Trim().ToLower() == projectName.Trim().ToLower())
                 {
@@ -322,9 +333,9 @@ namespace DepDot
             return -1;
         }
 
-        public static int GetUniqueProjectId(string scheduleName, string projectName, List<LineItem> lines)
+        public int GetUniqueProjectId(string scheduleName, string projectName)
         {
-            foreach (LineItem line in lines)
+            foreach (LineItem line in LineItems)
             {
                 if (line.ProjectName.Trim().ToLower() == projectName.Trim().ToLower() &&
                     line.Schedule.Trim().ToLower() == scheduleName.Trim().ToLower())
@@ -335,9 +346,9 @@ namespace DepDot
             return -1;
         }
 
-        public static int GetUniqueProjectId(string scheduleName, string version, string projectName, List<LineItem> lines)
+        public int GetUniqueProjectId(string scheduleName, string version, string projectName)
         {
-            foreach (LineItem line in lines)
+            foreach (LineItem line in LineItems)
             {
                 if (string.IsNullOrEmpty(line.ProjectName)) line.ProjectName = string.Empty;
                 if (string.IsNullOrEmpty(line.Schedule)) line.Schedule = string.Empty;
@@ -357,7 +368,7 @@ namespace DepDot
             return -1;
         }
 
-        public static string Sanitise(string text)
+        public string Sanitise(string text)
         {
             if (string.IsNullOrEmpty(text)) return null;
 
@@ -369,9 +380,9 @@ namespace DepDot
             return text;
         }
 
-        private static LineItem GetLine(int Id, List<LineItem> lines)
+        private LineItem GetLine(int Id)
         {
-            foreach (LineItem line in lines)
+            foreach (LineItem line in LineItems)
             {
                 if (line.Id.ToString() == Id.ToString())
                 {
@@ -381,13 +392,13 @@ namespace DepDot
             return null;
         }
 
-        private static LineItem GetLine(string Id, List<LineItem> lines)
+        private LineItem GetLine(string Id)
         {
             int targetId = 0;
             int.TryParse(Id, out targetId);
             if (targetId > 0)
             {
-                return GetLine(targetId, lines);
+                return GetLine(targetId);
             }
             else
             {
@@ -395,7 +406,7 @@ namespace DepDot
             }
         }
 
-        private static bool OutputContains(string textToFind, StringBuilder sb)
+        private bool OutputContains(string textToFind, StringBuilder sb)
         {
             return (sb.ToString().Contains(textToFind));
         }

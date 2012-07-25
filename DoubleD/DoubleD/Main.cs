@@ -8,6 +8,8 @@ using System.Linq;
 using System.Text;
 using System.Reflection;
 using System.Windows.Forms;
+using DepDot;
+using Control = System.Windows.Forms.Control;
 
 namespace DoubleD
 {
@@ -97,6 +99,17 @@ namespace DoubleD
                 return;
             }
 
+             _inputFile = txtInput.Text;
+             _outputFile = txtOutput.Text;
+            if(File.Exists(_outputFile))
+            {
+                DialogResult r = MessageBox.Show("The output file already exists. Do you want to overwrite it?", "Question", MessageBoxButtons.OKCancel, MessageBoxIcon.Question);
+                if(r == DialogResult.Cancel)
+                {
+                    return;
+                }
+            }
+
             _rankFix = (chkRankFix.Checked == true) ? true : false;
             _noFrom = (chkDontIncludeFrom.Checked == true) ? true : false;
             _includePast = (chkPastDeps.Checked == true) ? true : false;
@@ -151,6 +164,7 @@ namespace DoubleD
 
             _bw.ReportProgress(0, "Reading Excel file...");
 
+            //read the input file
             try
             {
                 lines = DepDot.ExcelReader.Read(_inputFile, _noFrom, _includePast);
@@ -161,7 +175,7 @@ namespace DoubleD
                 return;
             }
 
-            _bw.ReportProgress(0, lines.Count.ToString() + " rows read");
+            _bw.ReportProgress(0, lines.Count + " rows read");
 
             if (lines.Count == 0)
             {
@@ -171,10 +185,25 @@ namespace DoubleD
 
             _bw.ReportProgress(0, "Converting rows to DOT language...");
             
+            //generate dot file
             try
             {
+                DepDot.DotWriter dw = new DotWriter(lines);
+
+                dw.NoFrom = _noFrom;
+                dw.RankFix = _rankFix;
+                dw.FilterControl = _filterControl;
+                dw.FilterDate = _filterDate;
+                dw.FilterDateFrom = _filterDateFrom;
+                dw.FilterDateTo = _filterDateTo;
+                dw.FilterOwner = _filterOwner;
+                dw.FilterSchedule = _filterSchedule;
+                dw.FilterStrategic = _filterStrategic;
+
+                sb = dw.GenerateDot();
+
                 //GenerateDot(List<LineItem> lines, bool noFrom, bool rankFix, string filterStrategic, string filterSchedule, int filterControl, string filterOwner, bool filterDate, DateTime filterDateFrom, DateTime filterDateTo)
-                sb = DepDot.DotWriter.GenerateDot(lines, _noFrom, _rankFix, _includePast, _filterStrategic, _filterSchedule, _filterControl, _filterOwner, _filterDate, _filterDateFrom, _filterDateTo);
+                //sb = DepDot.DotWriter.GenerateDot(lines, _noFrom, _rankFix, _includePast, _filterStrategic, _filterSchedule, _filterControl, _filterOwner, _filterDate, _filterDateFrom, _filterDateTo);
             }
             catch
             {

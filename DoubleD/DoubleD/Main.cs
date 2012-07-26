@@ -201,13 +201,10 @@ namespace DoubleD
                 dw.FilterStrategic = _filterStrategic;
 
                 sb = dw.GenerateDot();
-
-                //GenerateDot(List<LineItem> lines, bool noFrom, bool rankFix, string filterStrategic, string filterSchedule, int filterControl, string filterOwner, bool filterDate, DateTime filterDateFrom, DateTime filterDateTo)
-                //sb = DepDot.DotWriter.GenerateDot(lines, _noFrom, _rankFix, _includePast, _filterStrategic, _filterSchedule, _filterControl, _filterOwner, _filterDate, _filterDateFrom, _filterDateTo);
             }
-            catch
+            catch(Exception ex)
             {
-                _bw.ReportProgress(0, "Conversion failed");
+                _bw.ReportProgress(0, "Conversion failed: " + ex.Message);
                 return;
             }
 

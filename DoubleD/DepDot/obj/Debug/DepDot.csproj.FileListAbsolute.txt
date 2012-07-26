@@ -5,3 +5,6 @@ C:\Users\david nicoll\Documents\Visual Studio 2010\Projects\DoubleD\DoubleD\DepD
 C:\Users\david nicoll\Documents\Visual Studio 2010\Projects\DoubleD\DoubleD\DepDot\obj\Debug\ResolveAssemblyReference.cache
 C:\Users\david nicoll\Documents\Visual Studio 2010\Projects\DoubleD\DoubleD\DepDot\obj\Debug\DepDot.dll
 C:\Users\david nicoll\Documents\Visual Studio 2010\Projects\DoubleD\DoubleD\DepDot\obj\Debug\DepDot.pdb
+C:\Users\david nicoll\documents\visual studio 2010\Projects\DoubleD\DoubleD\DepDot\bin\Debug\Graphviz4Net.dll
+C:\Users\david nicoll\documents\visual studio 2010\Projects\DoubleD\DoubleD\DepDot\bin\Debug\Antlr3.Runtime.dll
+C:\Users\david nicoll\documents\visual studio 2010\Projects\DoubleD\DoubleD\DepDot\bin\Debug\Graphviz4Net.pdb

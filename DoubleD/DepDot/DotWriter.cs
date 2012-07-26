@@ -8,6 +8,8 @@ namespace DepDot
     public class DotWriter
     {
         public List<LineItem> LineItems;
+        public List<Project> Projects;
+        public List<Schedule> Schedules;
         public StringBuilder DotOutput;
         public bool NoFrom { get; set; }
         public bool RankFix { get; set; }
@@ -19,7 +21,7 @@ namespace DepDot
         public bool FilterDate { get; set; }
         public DateTime FilterDateFrom { get; set; }
         public DateTime FilterDateTo { get; set; }
-
+    
         public DotWriter()
         {
         }
@@ -28,10 +30,62 @@ namespace DepDot
         {
             LineItems = lines;
         }
-
-        public StringBuilder GenerateDot()
+        
+        private bool ProjectAlreadyExists(LineItem line)
         {
-            DotOutput = new StringBuilder();
+            return Projects.Any(p => p.Name == line.ProjectName);
+        }
+
+        private bool ScheduleAlreadyExists(LineItem line)
+        {
+            string schedule = line.Schedule + " " + line.Version;
+            return Schedules.Any(s => s.Name == schedule);
+        }
+
+        private void BuildProjectsAndSchedules()
+        {
+            //build unique list of projects
+            
+            foreach (LineItem line in LineItems)
+            {
+                if (!ProjectAlreadyExists(line))
+                {
+                    Project p = new Project() { Name = line.ProjectName, UniqueId = "p" + line.Id.ToString(), NodeType = NodeType.PROJECT };
+                    Projects.Add(p);
+                }
+            }
+    
+            foreach(LineItem line in LineItems)
+            {
+                if(!ScheduleAlreadyExists(line))
+                {
+                    Schedule s = new Schedule()
+                                     {
+                                         Name = line.Schedule + " " + line.Version,
+                                         UniqueId = "s" + Sanitise(line.Schedule + " " + line.Version),
+                                         NodeType = NodeType.SCHEDULE
+                                     };
+                    Schedules.Add(s);
+                }
+            }
+
+            foreach(Project p in Projects)
+            {
+                Console.WriteLine("Project: " + p.Name);
+            }
+            foreach(Schedule s in Schedules)
+            {
+                Console.WriteLine("Schedule: " + s.Name);
+            }
+        }
+
+        public StringBuilder GenerateDot() 
+        {
+            //build projects and schedules
+            Projects = new List<Project>();
+            Schedules = new List<Schedule>();
+
+            BuildProjectsAndSchedules();
 
             DotOutput.AppendLine("digraph testdiagram {");
 
